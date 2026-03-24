@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, UserPlus, Download, Filter, X } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { useEmployees } from '@/services/hooks/useEmployees';
@@ -13,6 +14,7 @@ const STATUSES = ['all', 'active', 'punched-in', 'archived'] as const;
 
 export default function Employees() {
   const { isDark } = useThemeStore();
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -52,14 +54,14 @@ export default function Employees() {
       label: 'Employee',
       sortable: true,
       render: (_: unknown, row: Employee) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/employees/${row.id}`)}>
           <div
             className="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
           >
             {row.firstName.charAt(0)}{row.lastName.charAt(0)}
           </div>
           <div>
-            <div className={clsx('text-sm font-medium', isDark ? 'text-gray-200' : 'text-gray-800')}>
+            <div className={clsx('text-sm font-medium hover:text-indigo-400 transition-colors', isDark ? 'text-gray-200' : 'text-gray-800')}>
               {row.fullName}
             </div>
             <div className={clsx('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>
@@ -118,13 +120,7 @@ export default function Employees() {
       render: (_: unknown, row: Employee) => (
         <button
           className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium"
-          onClick={() => {
-            notifications.show({
-              title: 'View Employee',
-              message: `Viewing details for ${row.fullName}`,
-              color: 'indigo',
-            });
-          }}
+          onClick={() => navigate(`/employees/${row.id}`)}
         >
           View
         </button>

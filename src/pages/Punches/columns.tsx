@@ -1,9 +1,13 @@
-import { LogIn, LogOut, Clock, AlertTriangle } from 'lucide-react';
+import { LogIn, LogOut, Clock, AlertTriangle, Timer, Pencil } from 'lucide-react';
 import clsx from 'clsx';
 import type { Punch } from '@/types';
 
-export function getPunchColumns(isDark: boolean, navigate: (path: string) => void) {
-  return [
+export function getPunchColumns(
+  isDark: boolean,
+  navigate: (path: string) => void,
+  options?: { isAdmin?: boolean; onEdit?: (punch: Punch) => void }
+) {
+  const columns = [
     {
       key: 'id',
       label: 'Record ID',
@@ -68,13 +72,20 @@ export function getPunchColumns(isDark: boolean, navigate: (path: string) => voi
       key: 'status',
       label: 'Status',
       render: (_: unknown, row: Punch) => (
-        row.isCorrected ? (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400">
-            <AlertTriangle size={10} /> Corrected
-          </span>
-        ) : (
-          <span className={clsx('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Normal</span>
-        )
+        <div className="flex flex-col gap-1">
+          {row.isCorrected ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500/10 text-yellow-400">
+              <AlertTriangle size={10} /> Corrected
+            </span>
+          ) : (
+            <span className={clsx('text-xs', isDark ? 'text-gray-500' : 'text-gray-400')}>Normal</span>
+          )}
+          {row.gracePeriodApplied && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
+              <Timer size={10} /> Grace Period
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -97,13 +108,26 @@ export function getPunchColumns(isDark: boolean, navigate: (path: string) => voi
       key: 'actions',
       label: '',
       render: (_: unknown, row: Punch) => (
-        <button
-          className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium px-2.5 py-1 rounded-lg hover:bg-indigo-500/10"
-          onClick={() => navigate(`/punches/${row.id}`)}
-        >
-          View
-        </button>
+        <div className="flex items-center gap-1">
+          {options?.isAdmin && options?.onEdit && (
+            <button
+              className="text-xs text-yellow-400 hover:text-yellow-300 transition-colors font-medium px-2 py-1 rounded-lg hover:bg-yellow-500/10"
+              onClick={(e) => { e.stopPropagation(); options.onEdit!(row); }}
+              title="Edit record"
+            >
+              <Pencil size={13} />
+            </button>
+          )}
+          <button
+            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium px-2.5 py-1 rounded-lg hover:bg-indigo-500/10"
+            onClick={() => navigate(`/punches/${row.id}`)}
+          >
+            View
+          </button>
+        </div>
       ),
     },
   ];
+
+  return columns;
 }

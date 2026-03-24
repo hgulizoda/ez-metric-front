@@ -1,8 +1,10 @@
-import { Users, Clock, AlertTriangle, BarChart2, Wifi, Activity } from 'lucide-react';
+import { Users, Clock, AlertTriangle, BarChart2, CalendarCheck, Activity } from 'lucide-react';
 import { KPICard } from '@/components/ui/KPICard';
 import { HoursBarChart } from '@/components/charts/HoursBarChart';
 import { OvertimeLineChart } from '@/components/charts/OvertimeLineChart';
 import { PunchDonutChart } from '@/components/charts/PunchDonutChart';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
 import ClockInOutCard from '@/components/shared/ClockInOutCard';
 import {
   useDashboardMetrics,
@@ -35,27 +37,41 @@ function SectionCard({ title, children, className }: { title?: string; children:
   );
 }
 
+function getPayPeriodLabel(): string {
+  const now = new Date();
+  // Bi-weekly pay period: find the Monday of the current 2-week period
+  const dayOfWeek = now.getDay();
+  const mondayOffset = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() + mondayOffset);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+
+  const fmt = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  return `${fmt(weekStart)} – ${fmt(weekEnd)}`;
+}
+
 export default function Dashboard() {
   const { isDark } = useThemeStore();
-  const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics();
+  const { data: metrics, isLoading: metricsLoading, isError: metricsError } = useDashboardMetrics();
   const { data: hoursBar, isLoading: hoursLoading } = useHoursBarData();
   const { data: overtimeLine, isLoading: overtimeLoading } = useOvertimeLineData();
   const { data: donutData, isLoading: donutLoading } = usePunchDonutData();
 
   const kpis = [
     {
-      label: 'Total Employees',
+      label: 'Total Workers',
       value: metrics?.totalEmployees ?? 0,
       icon: <Users size={18} />,
       color: '#6366f1',
       bgColor: 'rgba(99,102,241,0.15)',
-      change: 2,
-      changeType: 'increase' as const,
-      changeLabel: 'vs last month',
       delay: 0,
     },
     {
-      label: 'Punched In Now',
+      label: 'Clocked In',
       value: metrics?.punchedInCount ?? 0,
       icon: <Activity size={18} />,
       color: '#10b981',
@@ -63,14 +79,11 @@ export default function Dashboard() {
       delay: 100,
     },
     {
-      label: 'Missed Punches',
+      label: 'Open Records',
       value: metrics?.missedPunches ?? 0,
       icon: <AlertTriangle size={18} />,
       color: '#ef4444',
       bgColor: 'rgba(239,68,68,0.15)',
-      change: -2,
-      changeType: 'decrease' as const,
-      changeLabel: 'vs yesterday',
       delay: 200,
     },
     {
@@ -92,9 +105,9 @@ export default function Dashboard() {
       delay: 400,
     },
     {
-      label: 'Devices Online',
+      label: 'Active Shifts',
       value: metrics?.devicesOnline ?? 0,
-      icon: <Wifi size={18} />,
+      icon: <CalendarCheck size={18} />,
       color: '#3b82f6',
       bgColor: 'rgba(59,130,246,0.15)',
       delay: 500,
@@ -110,7 +123,7 @@ export default function Dashboard() {
             Dashboard
           </h1>
           <p className={clsx('text-sm mt-0.5', isDark ? 'text-gray-500' : 'text-gray-400')}>
-            Pay Period: Mar 14 – Mar 20, 2026
+            Week: {getPayPeriodLabel()}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs">
@@ -118,6 +131,11 @@ export default function Dashboard() {
           <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>Live</span>
         </div>
       </div>
+
+      {/* Error state */}
+      {metricsError && (
+        <ErrorState message="Failed to load dashboard data. Check that the backend is running." />
+      )}
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -136,11 +154,13 @@ export default function Dashboard() {
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Hours by Job */}
+        {/* Hours by Day */}
         <div className="lg:col-span-2">
-          <SectionCard title="Total Hours by Job — This Week">
+          <SectionCard title="Hours Breakdown — This Week">
             {hoursLoading ? (
               <div className="h-60 shimmer rounded-xl" />
+            ) : (hoursBar ?? []).length === 0 ? (
+              <EmptyState description="No clock records this week yet." />
             ) : (
               <HoursBarChart data={hoursBar ?? []} />
             )}
@@ -158,13 +178,13 @@ export default function Dashboard() {
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <span className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                    Punched In: {metrics?.punchedInCount ?? 0}
+                    Clocked In: {metrics?.punchedInCount ?? 0}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
                   <span className={clsx('text-xs', isDark ? 'text-gray-400' : 'text-gray-500')}>
-                    Punched Out: {metrics?.punchedOutCount ?? 0}
+                    Clocked Out: {metrics?.punchedOutCount ?? 0}
                   </span>
                 </div>
               </div>
@@ -173,7 +193,7 @@ export default function Dashboard() {
         </SectionCard>
       </div>
 
-      {/* Overtime trend + Activity feed */}
+      {/* Overtime trend + Clock In/Out */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Overtime trend */}
         <div className="lg:col-span-2">
@@ -192,7 +212,7 @@ export default function Dashboard() {
         </SectionCard>
       </div>
 
-      {/* Missed Punches Alert */}
+      {/* Open Clock Records Alert */}
       {(metrics?.missedPunches ?? 0) > 0 && (
         <div
           className="rounded-2xl p-4 flex items-center gap-3"
@@ -203,7 +223,7 @@ export default function Dashboard() {
         >
           <AlertTriangle size={16} className="text-red-400 flex-shrink-0" />
           <span className={clsx('text-sm', isDark ? 'text-red-300' : 'text-red-600')}>
-            <strong>{metrics?.missedPunches} employees</strong> have missed punch records this pay period.
+            <strong>{metrics?.missedPunches} workers</strong> have open clock records (clocked in without clocking out).
             Review the{' '}
             <a href="/punches" className="underline hover:no-underline">
               Punch Records

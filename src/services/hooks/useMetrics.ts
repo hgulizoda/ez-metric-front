@@ -4,7 +4,7 @@ import {
   apiGetHoursBarData,
   apiGetOvertimeLineData,
   apiGetPunchDonutData,
-  apiGetActivityFeed,
+  apiGetClockStatus,
 } from '@/services/api';
 
 export function useDashboardMetrics() {
@@ -41,10 +41,10 @@ export function usePunchDonutData() {
   });
 }
 
-export function useActivityFeed() {
+export function useClockStatus() {
   return useQuery({
-    queryKey: ['activity', 'feed'],
-    queryFn: apiGetActivityFeed,
+    queryKey: ['dashboard', 'clockStatus'],
+    queryFn: apiGetClockStatus,
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
   });

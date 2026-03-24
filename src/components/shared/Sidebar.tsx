@@ -9,10 +9,22 @@ import {
   ChevronLeft,
   ChevronRight,
   Truck,
-  Activity,
   UserCircle,
   LogOut,
   ChevronDown,
+  ChevronUp,
+  CalendarClock,
+  DollarSign,
+  Gauge,
+  ClipboardList,
+  AlertTriangle,
+  UserCheck,
+  Eye,
+  Banknote,
+  Monitor,
+  Layers,
+  Building2,
+  Briefcase,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/services/hooks/useAuth';
@@ -29,6 +41,7 @@ interface NavItem {
   path: string;
   badge?: string;
   badgeColor?: string;
+  children?: { label: string; path: string; icon: React.ReactNode }[];
 }
 
 interface NavSection {
@@ -42,19 +55,45 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/dashboard' },
       { label: 'Clock Records', icon: <Clock size={18} />, path: '/punches' },
+      { label: 'Shifts', icon: <CalendarClock size={18} />, path: '/shifts' },
+    ],
+  },
+  {
+    title: 'FINANCE',
+    items: [
+      { label: 'Salary', icon: <DollarSign size={18} />, path: '/salary' },
+      { label: 'Efficiency', icon: <Gauge size={18} />, path: '/efficiency' },
     ],
   },
   {
     title: 'REPORTS',
     items: [
       { label: 'Analytics', icon: <BarChart3 size={18} />, path: '/analytics' },
-      { label: 'Reports', icon: <FileText size={18} />, path: '/reports' },
+      {
+        label: 'Reports',
+        icon: <FileText size={18} />,
+        path: '/reports',
+        children: [
+          { label: 'Timecard Detail', path: '/reports/timecard', icon: <Clock size={14} /> },
+          { label: 'Totals Summary', path: '/reports/totals-summary', icon: <BarChart3 size={14} /> },
+          { label: 'Jobs Report', path: '/reports/jobs', icon: <ClipboardList size={14} /> },
+          { label: 'Authorization', path: '/reports/authorization', icon: <UserCheck size={14} /> },
+          { label: 'Missed Punches', path: '/reports/missed-punches', icon: <AlertTriangle size={14} /> },
+          { label: 'Exceptions', path: '/reports/exceptions', icon: <AlertTriangle size={14} /> },
+          { label: 'Who Is In/Out', path: '/reports/who-is-in', icon: <Eye size={14} /> },
+          { label: 'Payroll Export', path: '/reports/payroll', icon: <Banknote size={14} /> },
+        ],
+      },
     ],
   },
   {
     title: 'MANAGE',
     items: [
       { label: 'Employees', icon: <Users size={18} />, path: '/employees' },
+      { label: 'Devices', icon: <Monitor size={18} />, path: '/devices' },
+      { label: 'Shift Types', icon: <Layers size={18} />, path: '/shift-types' },
+      { label: 'Departments', icon: <Building2 size={18} />, path: '/departments' },
+      { label: 'Jobs', icon: <Briefcase size={18} />, path: '/jobs' },
     ],
   },
   {
@@ -69,8 +108,15 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
   const isActive = (path: string) => location.pathname === path;
+  const isChildActive = (item: NavItem) =>
+    item.children?.some((child) => location.pathname === child.path) ?? false;
+
+  const toggleExpand = (path: string) => {
+    setExpandedItems((prev) => ({ ...prev, [path]: !prev[path] }));
+  };
 
   return (
     <div
@@ -129,46 +175,114 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 {section.title}
               </div>
             )}
-            {section.items.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive: active }) =>
-                  clsx(
-                    'flex items-center gap-3 mx-2 mb-0.5 rounded-xl transition-all duration-150 group',
-                    collapsed ? 'px-2.5 py-2.5 justify-center' : 'px-3 py-2',
-                    active || isActive(item.path)
-                      ? 'nav-item-active text-indigo-300'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
-                  )
-                }
-                title={collapsed ? item.label : undefined}
-              >
-                <span
-                  className={clsx(
-                    'flex-shrink-0 transition-colors',
-                    (location.pathname === item.path)
-                      ? 'text-indigo-400'
-                      : 'text-gray-500 group-hover:text-gray-300'
-                  )}
+            {section.items.map((item) => {
+              const hasChildren = item.children && item.children.length > 0;
+              const isExpanded = expandedItems[item.path] || isChildActive(item);
+              const parentActive = isActive(item.path) || isChildActive(item);
+
+              if (hasChildren && !collapsed) {
+                return (
+                  <div key={item.path}>
+                    {/* Parent item - clickable to expand/collapse */}
+                    <button
+                      onClick={() => toggleExpand(item.path)}
+                      className={clsx(
+                        'w-full flex items-center gap-3 mx-2 mb-0.5 rounded-xl transition-all duration-150 group px-3 py-2',
+                        parentActive
+                          ? 'nav-item-active text-indigo-300'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                      )}
+                      style={{ width: 'calc(100% - 16px)' }}
+                    >
+                      <span
+                        className={clsx(
+                          'flex-shrink-0 transition-colors',
+                          parentActive ? 'text-indigo-400' : 'text-gray-500 group-hover:text-gray-300'
+                        )}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="text-sm font-medium">{item.label}</span>
+                      <span className="ml-auto text-gray-500">
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </span>
+                    </button>
+
+                    {/* Children */}
+                    {isExpanded && (
+                      <div className="ml-4 mt-0.5 mb-1">
+                        {item.children!.map((child) => (
+                          <NavLink
+                            key={child.path}
+                            to={child.path}
+                            className={clsx(
+                              'flex items-center gap-2.5 mx-2 mb-0.5 rounded-lg transition-all duration-150 group px-3 py-1.5',
+                              location.pathname === child.path
+                                ? 'text-indigo-300 bg-indigo-500/10'
+                                : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                            )}
+                          >
+                            <span
+                              className={clsx(
+                                'flex-shrink-0 transition-colors',
+                                location.pathname === child.path
+                                  ? 'text-indigo-400'
+                                  : 'text-gray-600 group-hover:text-gray-400'
+                              )}
+                            >
+                              {child.icon}
+                            </span>
+                            <span className="text-xs font-medium">{child.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Regular nav item (no children, or collapsed)
+              return (
+                <NavLink
+                  key={item.path}
+                  to={hasChildren ? item.children![0].path : item.path}
+                  className={({ isActive: active }) =>
+                    clsx(
+                      'flex items-center gap-3 mx-2 mb-0.5 rounded-xl transition-all duration-150 group',
+                      collapsed ? 'px-2.5 py-2.5 justify-center' : 'px-3 py-2',
+                      active || parentActive
+                        ? 'nav-item-active text-indigo-300'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                    )
+                  }
+                  title={collapsed ? item.label : undefined}
                 >
-                  {item.icon}
-                </span>
-                {!collapsed && (
-                  <span className="text-sm font-medium">{item.label}</span>
-                )}
-                {!collapsed && item.badge && (
                   <span
                     className={clsx(
-                      'ml-auto text-xs px-1.5 py-0.5 rounded-full',
-                      item.badgeColor || 'bg-indigo-500/20 text-indigo-300'
+                      'flex-shrink-0 transition-colors',
+                      parentActive
+                        ? 'text-indigo-400'
+                        : 'text-gray-500 group-hover:text-gray-300'
                     )}
                   >
-                    {item.badge}
+                    {item.icon}
                   </span>
-                )}
-              </NavLink>
-            ))}
+                  {!collapsed && (
+                    <span className="text-sm font-medium">{item.label}</span>
+                  )}
+                  {!collapsed && item.badge && (
+                    <span
+                      className={clsx(
+                        'ml-auto text-xs px-1.5 py-0.5 rounded-full',
+                        item.badgeColor || 'bg-indigo-500/20 text-indigo-300'
+                      )}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
           </div>
         ))}
       </nav>

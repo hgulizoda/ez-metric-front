@@ -36,10 +36,11 @@ export default function TimecardDetail() {
           value={selectedEmp}
           onChange={(e) => setSelectedEmp(e.target.value)}
           className={clsx(
-            "px-3 py-2 rounded-xl text-sm outline-none",
-            isDark ? "text-gray-200" : "text-gray-700"
+            "px-3 py-2 rounded-xl text-sm outline-none transition-all",
+            isDark
+              ? "bg-white/5 text-gray-200 border border-white/8 focus:border-indigo-500/50"
+              : "bg-gray-50 text-gray-700 border border-gray-200 focus:border-indigo-400"
           )}
-          style={{ backgroundColor: cardBg, border: `1px solid ${border}` }}
         >
           <option value="all">All Employees</option>
           {EMPLOYEES.map((e) => (

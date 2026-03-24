@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import { LogIn, LogOut, Users } from "lucide-react";
 import { useThemeStore } from "@/app/store/themeStore";
-import { MOCK_EMPLOYEES } from "@/services/api/data/employees";
-import { DeptBadge } from "@/components/shared/Badges";
+import { useClockStatus } from "@/services/hooks/useMetrics";
 import clsx from "clsx";
 
 type ClockFilter = "all" | "clocked-in" | "clocked-out";
@@ -16,21 +15,26 @@ const FILTERS: { value: ClockFilter; label: string; icon: typeof Users; activeCo
 export default function ClockInOutCard() {
   const { isDark } = useThemeStore();
   const [filter, setFilter] = useState<ClockFilter>("all");
+  const { data: workers = [], isLoading } = useClockStatus();
 
   const filtered = useMemo(() => {
-    if (filter === "clocked-in") return MOCK_EMPLOYEES.filter((e) => e.isPunchedIn);
-    if (filter === "clocked-out") return MOCK_EMPLOYEES.filter((e) => !e.isPunchedIn);
-    return MOCK_EMPLOYEES;
-  }, [filter]);
+    if (filter === "clocked-in") return workers.filter((w) => w.is_clocked_in);
+    if (filter === "clocked-out") return workers.filter((w) => !w.is_clocked_in);
+    return workers;
+  }, [filter, workers]);
 
-  const inCount = MOCK_EMPLOYEES.filter((e) => e.isPunchedIn).length;
-  const outCount = MOCK_EMPLOYEES.length - inCount;
+  const inCount = workers.filter((w) => w.is_clocked_in).length;
+  const outCount = workers.length - inCount;
 
   const countMap: Record<ClockFilter, number> = {
-    all: MOCK_EMPLOYEES.length,
+    all: workers.length,
     "clocked-in": inCount,
     "clocked-out": outCount,
   };
+
+  if (isLoading) {
+    return <div className="h-64 shimmer rounded-xl" />;
+  }
 
   return (
     <>
@@ -81,7 +85,7 @@ export default function ClockInOutCard() {
         })}
       </div>
 
-      {/* Employee list */}
+      {/* Worker list */}
       <div
         className="divide-y overflow-y-auto max-h-64 scrollbar-thin pr-1"
         style={{
@@ -90,17 +94,28 @@ export default function ClockInOutCard() {
             : "rgba(0,0,0,0.05)",
         } as React.CSSProperties}
       >
-        {filtered.map((emp) => {
-          const isIn = emp.isPunchedIn;
+        {filtered.length === 0 && (
+          <div className={clsx("text-center py-6 text-xs", isDark ? "text-gray-500" : "text-gray-400")}>
+            No workers found
+          </div>
+        )}
+        {filtered.map((worker) => {
+          const isIn = worker.is_clocked_in;
+          const initials = worker.name
+            .split(" ")
+            .map((n) => n.charAt(0))
+            .join("")
+            .slice(0, 2)
+            .toUpperCase();
+
           return (
-            <div key={emp.id} className="flex items-center gap-3 py-2.5">
+            <div key={worker.id} className="flex items-center gap-3 py-2.5">
               {/* Avatar */}
               <div className="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
-                {emp.firstName.charAt(0)}
-                {emp.lastName.charAt(0)}
+                {initials}
               </div>
 
-              {/* Name + dept */}
+              {/* Name + position */}
               <div className="flex-1 min-w-0">
                 <div
                   className={clsx(
@@ -108,10 +123,10 @@ export default function ClockInOutCard() {
                     isDark ? "text-gray-200" : "text-gray-800",
                   )}
                 >
-                  {emp.fullName}
+                  {worker.name}
                 </div>
-                <div className="mt-0.5">
-                  <DeptBadge dept={emp.department} />
+                <div className={clsx("text-[10px] mt-0.5", isDark ? "text-gray-500" : "text-gray-400")}>
+                  {worker.position}
                 </div>
               </div>
 
@@ -136,7 +151,7 @@ export default function ClockInOutCard() {
                     isDark ? "text-gray-300" : "text-gray-700",
                   )}
                 >
-                  {emp.weeklyHours.toFixed(1)}h
+                  {worker.weekly_hours.toFixed(1)}h
                 </div>
               </div>
             </div>
@@ -145,8 +160,11 @@ export default function ClockInOutCard() {
       </div>
 
       {/* Footer */}
-      <button className="w-full mt-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors py-1">
-        View all employees →
+      <button
+        className="w-full mt-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors py-1"
+        onClick={() => window.location.href = '/employees'}
+      >
+        View all employees &rarr;
       </button>
     </>
   );

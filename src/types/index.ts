@@ -80,6 +80,8 @@ export interface Punch {
   isOvertime?: boolean;
   deviceId?: string;
   isCorrected?: boolean;
+  gracePeriodApplied?: boolean;
+  clockRecordId?: number;
 }
 
 export interface PunchPair {

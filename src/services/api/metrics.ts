@@ -3,151 +3,75 @@ import type {
   HoursBarData,
   OvertimeLineData,
   PunchDonutData,
-  ActivityEvent,
 } from '@/types';
+import client, { unwrap } from './client';
+
+interface SummaryResponse {
+  total_workers: number;
+  active_today: number;
+  total_shifts: number;
+  active_shifts: number;
+  open_clock_records: number;
+  hours_this_week: number;
+  approaching_overtime: number;
+}
+
+interface WorkedHoursResponse {
+  today: number;
+  this_week: number;
+  this_month: number;
+  daily_breakdown: { date: string; hours: number; overtime: number }[];
+}
+
+export interface ClockStatusWorker {
+  id: number;
+  name: string;
+  position: string;
+  is_clocked_in: boolean;
+  weekly_hours: number;
+}
 
 export async function apiGetDashboardMetrics(): Promise<DashboardMetrics> {
-  await new Promise((resolve) => setTimeout(resolve, 600));
+  const summary = await unwrap<SummaryResponse>(client.get('/dashboard/summary'));
   return {
-    totalEmployees: 32,
-    activePunches: 0,
-    missedPunches: 5,
-    hoursThisWeek: 616.92,
-    approachingOvertime: 3,
-    devicesOnline: 1,
-    punchedInCount: 18,
-    punchedOutCount: 14,
+    totalEmployees: summary.total_workers,
+    activePunches: summary.active_today,
+    missedPunches: summary.open_clock_records,
+    hoursThisWeek: summary.hours_this_week,
+    approachingOvertime: summary.approaching_overtime,
+    devicesOnline: summary.active_shifts,
+    punchedInCount: summary.open_clock_records,
+    punchedOutCount: Math.max(0, summary.total_workers - summary.open_clock_records),
   };
 }
 
 export async function apiGetHoursBarData(): Promise<HoursBarData[]> {
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  return [
-    { job: 'Mechanical Floor', hours: 312.5, regular: 280.0, overtime: 32.5 },
-    { job: 'Office', hours: 128.0, regular: 120.0, overtime: 8.0 },
-    { job: 'Parts Dept', hours: 96.25, regular: 88.0, overtime: 8.25 },
-    { job: 'Management', hours: 80.17, regular: 80.17, overtime: 0 },
-    { job: 'Diagnostics', hours: 0, regular: 0, overtime: 0 },
-  ];
+  const data = await unwrap<WorkedHoursResponse>(client.get('/dashboard/worked-hours'));
+  if (data.daily_breakdown && data.daily_breakdown.length > 0) {
+    return data.daily_breakdown.map((d) => ({
+      job: d.date,
+      hours: d.hours + d.overtime,
+      regular: d.hours,
+      overtime: d.overtime,
+    }));
+  }
+  return [];
 }
 
 export async function apiGetOvertimeLineData(): Promise<OvertimeLineData[]> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  const now = new Date('2026-03-18');
-  return Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 13 + i);
-    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const hours = 35 + Math.random() * 15;
-    const overtime = Math.max(0, hours - 40);
-    return {
-      date: label,
-      hours: parseFloat(hours.toFixed(1)),
-      overtime: parseFloat(overtime.toFixed(1)),
-      threshold: 40,
-    };
-  });
+  return unwrap<OvertimeLineData[]>(client.get('/dashboard/hours-trend'));
 }
 
 export async function apiGetPunchDonutData(): Promise<PunchDonutData[]> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  const summary = await unwrap<SummaryResponse>(client.get('/dashboard/summary'));
+  const clockedIn = summary.open_clock_records;
+  const clockedOut = Math.max(0, summary.total_workers - clockedIn);
   return [
-    { name: 'Punched In', value: 18, color: '#10b981' },
-    { name: 'Punched Out', value: 14, color: '#6366f1' },
+    { name: 'Punched In', value: clockedIn, color: '#10b981' },
+    { name: 'Punched Out', value: clockedOut, color: '#6366f1' },
   ];
 }
 
-export async function apiGetActivityFeed(): Promise<ActivityEvent[]> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return [
-    {
-      id: 'act-001',
-      employeeId: 'emp-003',
-      employeeName: 'Garcia, Jesus',
-      type: 'IN',
-      message: 'Punched IN via biometric device',
-      timestamp: new Date('2026-03-18T07:02:14').toISOString(),
-      department: 'Mechanical Floor',
-    },
-    {
-      id: 'act-002',
-      employeeId: 'emp-005',
-      employeeName: 'Lopez, Miguel',
-      type: 'IN',
-      message: 'Punched IN via biometric device',
-      timestamp: new Date('2026-03-18T07:04:33').toISOString(),
-      department: 'Mechanical Floor',
-    },
-    {
-      id: 'act-003',
-      employeeId: 'emp-006',
-      employeeName: 'Retana, Jose',
-      type: 'IN',
-      message: 'Punched IN via biometric device',
-      timestamp: new Date('2026-03-18T07:05:11').toISOString(),
-      department: 'Mechanical Floor',
-    },
-    {
-      id: 'act-004',
-      employeeId: 'emp-004',
-      employeeName: 'Grossi, Bernardo',
-      type: 'IN',
-      message: 'Punched IN via biometric device',
-      timestamp: new Date('2026-03-18T07:08:44').toISOString(),
-      department: 'Mechanical Floor',
-    },
-    {
-      id: 'act-005',
-      employeeId: 'emp-009',
-      employeeName: 'TURDIMURODOV, Oybek',
-      type: 'IN',
-      message: 'Punched IN via biometric device',
-      timestamp: new Date('2026-03-18T07:11:22').toISOString(),
-      department: 'Mechanical Floor',
-    },
-    {
-      id: 'act-006',
-      employeeId: 'emp-008',
-      employeeName: 'abdurahmanov, islomjon',
-      type: 'OUT',
-      message: 'Punched OUT — 8.5 hrs worked',
-      timestamp: new Date('2026-03-18T15:42:07').toISOString(),
-      department: 'Mechanical Floor',
-    },
-    {
-      id: 'act-007',
-      employeeId: 'emp-007',
-      employeeName: 'Khatamov, Zafar',
-      type: 'IN',
-      message: 'Punched IN via app',
-      timestamp: new Date('2026-03-18T08:01:55').toISOString(),
-      department: 'Office',
-    },
-    {
-      id: 'act-008',
-      employeeId: 'emp-010',
-      employeeName: 'Delgado, Josue',
-      type: 'OUT',
-      message: 'Punched OUT — 9.0 hrs worked (OT: 1.0 hr)',
-      timestamp: new Date('2026-03-18T16:05:30').toISOString(),
-      department: 'Mechanical Floor',
-    },
-    {
-      id: 'act-009',
-      employeeId: 'emp-002',
-      employeeName: 'Naranjo, Justin',
-      type: 'IN',
-      message: 'Punched IN via biometric device',
-      timestamp: new Date('2026-03-18T07:00:02').toISOString(),
-      department: 'Mechanical Floor',
-    },
-    {
-      id: 'act-010',
-      employeeId: 'sys',
-      employeeName: 'System',
-      type: 'system',
-      message: 'Biometric device B-001 came online',
-      timestamp: new Date('2026-03-18T07:00:00').toISOString(),
-    },
-  ];
+export async function apiGetClockStatus(): Promise<ClockStatusWorker[]> {
+  return unwrap<ClockStatusWorker[]>(client.get('/dashboard/clock-status'));
 }

@@ -1,78 +1,166 @@
-import type { Punch, PunchFilters, PaginatedResponse } from '@/types';
+import type { Punch, PunchFilters, PaginatedResponse, Department } from '@/types';
+import client, { unwrap } from './client';
 
-export const MOCK_PUNCHES: Punch[] = [
-  // ── emp-002 Naranjo, Justin ─────────────────────────────────────────
-  { id: 'clk-001', employeeId: 'emp-002', employeeName: 'Naranjo, Justin',  department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-14T07:02:00Z', date: '03/14/2026', time: '7:02 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-002', employeeId: 'emp-002', employeeName: 'Naranjo, Justin',  department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-14T15:30:00Z', date: '03/14/2026', time: '3:30 PM', source: 'Device', hoursWorked: 8.47,  isCorrected: false },
-  { id: 'clk-003', employeeId: 'emp-002', employeeName: 'Naranjo, Justin',  department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-16T07:01:00Z', date: '03/16/2026', time: '7:01 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-004', employeeId: 'emp-002', employeeName: 'Naranjo, Justin',  department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-16T15:32:00Z', date: '03/16/2026', time: '3:32 PM', source: 'Device', hoursWorked: 8.52,  isCorrected: false },
-  { id: 'clk-005', employeeId: 'emp-002', employeeName: 'Naranjo, Justin',  department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-17T07:00:00Z', date: '03/17/2026', time: '7:00 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-006', employeeId: 'emp-002', employeeName: 'Naranjo, Justin',  department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-17T15:00:00Z', date: '03/17/2026', time: '3:00 PM', source: 'Device', hoursWorked: 8.0,   isCorrected: false },
-  { id: 'clk-007', employeeId: 'emp-002', employeeName: 'Naranjo, Justin',  department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-18T07:00:02Z', date: '03/18/2026', time: '7:00 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-008', employeeId: 'emp-002', employeeName: 'Naranjo, Justin',  department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-18T16:10:00Z', date: '03/18/2026', time: '4:10 PM', source: 'Device', hoursWorked: 9.17,  isOvertime: true, isCorrected: false },
+// Mock punch data used by report sub-pages
+function genMockPunches() {
+  const employees = [
+    { id: 'emp-002', name: 'Naranjo, Justin', dept: 'Mechanical Floor' as Department },
+    { id: 'emp-003', name: 'Garcia, Jesus', dept: 'Mechanical Floor' as Department },
+    { id: 'emp-004', name: 'Grossi, Bernardo', dept: 'Mechanical Floor' as Department },
+    { id: 'emp-005', name: 'Lopez, Miguel', dept: 'Mechanical Floor' as Department },
+    { id: 'emp-006', name: 'Retana, Jose', dept: 'Mechanical Floor' as Department },
+    { id: 'emp-007', name: 'Khatamov, Zafar', dept: 'Office' as Department },
+    { id: 'emp-008', name: 'abdurahmanov, islomjon', dept: 'Mechanical Floor' as Department },
+    { id: 'emp-009', name: 'TURDIMURODOV, Oybek', dept: 'Mechanical Floor' as Department },
+    { id: 'emp-010', name: 'Delgado, Josue', dept: 'Mechanical Floor' as Department },
+    { id: 'emp-011', name: 'Martinez, Luis', dept: 'Parts' as Department },
+    { id: 'emp-012', name: 'Chen, David', dept: 'Office' as Department },
+  ];
+  const punches: Punch[] = [];
+  const baseDate = new Date();
+  for (let day = 0; day < 7; day++) {
+    for (const emp of employees) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() - day);
+      const inH = 6 + Math.floor(Math.random() * 2);
+      const inM = Math.floor(Math.random() * 30);
+      const clockIn = new Date(d.getFullYear(), d.getMonth(), d.getDate(), inH, inM);
+      const hoursWorked = 7.5 + Math.random() * 3;
+      const clockOut = new Date(clockIn.getTime() + hoursWorked * 3600000);
+      const dateStr = `${String(clockIn.getMonth() + 1).padStart(2, '0')}/${String(clockIn.getDate()).padStart(2, '0')}/${clockIn.getFullYear()}`;
+      const punchId = `mock-${emp.id}-${day}`;
+      punches.push({
+        id: `${punchId}-in`,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        department: emp.dept,
+        type: 'IN',
+        timestamp: clockIn.toISOString(),
+        date: dateStr,
+        time: clockIn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        source: 'Device',
+      });
+      punches.push({
+        id: `${punchId}-out`,
+        employeeId: emp.id,
+        employeeName: emp.name,
+        department: emp.dept,
+        type: 'OUT',
+        timestamp: clockOut.toISOString(),
+        date: dateStr,
+        time: clockOut.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        source: 'Device',
+        hoursWorked: parseFloat(hoursWorked.toFixed(2)),
+        isOvertime: hoursWorked > 8,
+      });
+    }
+  }
+  return punches.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
 
-  // ── emp-003 Garcia, Jesus ───────────────────────────────────────────
-  { id: 'clk-009', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-14T07:00:00Z', date: '03/14/2026', time: '7:00 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-010', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-14T16:00:00Z', date: '03/14/2026', time: '4:00 PM', source: 'Device', hoursWorked: 9.0,   isOvertime: true, isCorrected: false },
-  { id: 'clk-011', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-15T07:05:00Z', date: '03/15/2026', time: '7:05 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-012', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-15T15:45:00Z', date: '03/15/2026', time: '3:45 PM', source: 'Manual', hoursWorked: 8.67,  isCorrected: true },
-  { id: 'clk-013', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-16T07:00:00Z', date: '03/16/2026', time: '7:00 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-014', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-16T16:00:00Z', date: '03/16/2026', time: '4:00 PM', source: 'Device', hoursWorked: 9.0,   isOvertime: true, isCorrected: false },
-  { id: 'clk-015', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-17T07:03:00Z', date: '03/17/2026', time: '7:03 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-016', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-17T16:00:00Z', date: '03/17/2026', time: '4:00 PM', source: 'Device', hoursWorked: 8.95,  isCorrected: false },
-  { id: 'clk-017', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-18T07:02:14Z', date: '03/18/2026', time: '7:02 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-018', employeeId: 'emp-003', employeeName: 'Garcia, Jesus',    department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-18T16:05:00Z', date: '03/18/2026', time: '4:05 PM', source: 'Device', hoursWorked: 9.05,  isOvertime: true, isCorrected: false },
+export const MOCK_PUNCHES = genMockPunches();
 
-  // ── emp-007 Khatamov, Zafar ─────────────────────────────────────────
-  { id: 'clk-019', employeeId: 'emp-007', employeeName: 'Khatamov, Zafar',  department: 'Office',           type: 'IN',  timestamp: '2026-03-14T08:00:00Z', date: '03/14/2026', time: '8:00 AM', source: 'App',    isCorrected: false },
-  { id: 'clk-020', employeeId: 'emp-007', employeeName: 'Khatamov, Zafar',  department: 'Office',           type: 'OUT', timestamp: '2026-03-14T17:00:00Z', date: '03/14/2026', time: '5:00 PM', source: 'App',    hoursWorked: 9.0,   isOvertime: true, isCorrected: false },
-  { id: 'clk-021', employeeId: 'emp-007', employeeName: 'Khatamov, Zafar',  department: 'Office',           type: 'IN',  timestamp: '2026-03-16T08:01:55Z', date: '03/16/2026', time: '8:01 AM', source: 'App',    isCorrected: false },
-  { id: 'clk-022', employeeId: 'emp-007', employeeName: 'Khatamov, Zafar',  department: 'Office',           type: 'OUT', timestamp: '2026-03-16T17:05:00Z', date: '03/16/2026', time: '5:05 PM', source: 'App',    hoursWorked: 9.05,  isOvertime: true, isCorrected: false },
-  { id: 'clk-023', employeeId: 'emp-007', employeeName: 'Khatamov, Zafar',  department: 'Office',           type: 'IN',  timestamp: '2026-03-17T08:15:00Z', date: '03/17/2026', time: '8:15 AM', source: 'Manual', isCorrected: true },
-  { id: 'clk-024', employeeId: 'emp-007', employeeName: 'Khatamov, Zafar',  department: 'Office',           type: 'OUT', timestamp: '2026-03-17T17:00:00Z', date: '03/17/2026', time: '5:00 PM', source: 'App',    hoursWorked: 8.75,  isCorrected: false },
-  { id: 'clk-025', employeeId: 'emp-007', employeeName: 'Khatamov, Zafar',  department: 'Office',           type: 'IN',  timestamp: '2026-03-18T08:01:55Z', date: '03/18/2026', time: '8:01 AM', source: 'App',    isCorrected: false },
-  { id: 'clk-026', employeeId: 'emp-007', employeeName: 'Khatamov, Zafar',  department: 'Office',           type: 'OUT', timestamp: '2026-03-18T17:10:00Z', date: '03/18/2026', time: '5:10 PM', source: 'App',    hoursWorked: 9.13,  isOvertime: true, isCorrected: false },
+interface BackendClockRecord {
+  id: number;
+  worker_id: number;
+  shift_id: number;
+  clock_in: string;
+  clock_out: string | null;
+  is_manual_edit: boolean;
+  edit_note: string | null;
+  grace_period_applied: boolean;
+  created_at: string;
+  worker: { id: number; name: string; base_id: string; position: string };
+  shift: { id: number; name: string };
+}
 
-  // ── emp-006 Retana, Jose ────────────────────────────────────────────
-  { id: 'clk-027', employeeId: 'emp-006', employeeName: 'Retana, Jose',     department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-14T07:05:00Z', date: '03/14/2026', time: '7:05 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-028', employeeId: 'emp-006', employeeName: 'Retana, Jose',     department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-14T15:35:00Z', date: '03/14/2026', time: '3:35 PM', source: 'Device', hoursWorked: 8.5,   isCorrected: false },
-  { id: 'clk-029', employeeId: 'emp-006', employeeName: 'Retana, Jose',     department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-16T07:05:00Z', date: '03/16/2026', time: '7:05 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-030', employeeId: 'emp-006', employeeName: 'Retana, Jose',     department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-16T15:40:00Z', date: '03/16/2026', time: '3:40 PM', source: 'Device', hoursWorked: 8.58,  isCorrected: false },
-  { id: 'clk-031', employeeId: 'emp-006', employeeName: 'Retana, Jose',     department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-17T07:10:00Z', date: '03/17/2026', time: '7:10 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-032', employeeId: 'emp-006', employeeName: 'Retana, Jose',     department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-17T15:50:00Z', date: '03/17/2026', time: '3:50 PM', source: 'Manual', hoursWorked: 8.67,  isCorrected: true },
-  { id: 'clk-033', employeeId: 'emp-006', employeeName: 'Retana, Jose',     department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-18T07:05:11Z', date: '03/18/2026', time: '7:05 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-034', employeeId: 'emp-006', employeeName: 'Retana, Jose',     department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-18T16:00:00Z', date: '03/18/2026', time: '4:00 PM', source: 'Device', hoursWorked: 8.92,  isCorrected: false },
+function formatTime12(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
 
-  // ── emp-004 Grossi, Bernardo ────────────────────────────────────────
-  { id: 'clk-035', employeeId: 'emp-004', employeeName: 'Grossi, Bernardo', department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-14T07:03:00Z', date: '03/14/2026', time: '7:03 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-036', employeeId: 'emp-004', employeeName: 'Grossi, Bernardo', department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-14T15:45:00Z', date: '03/14/2026', time: '3:45 PM', source: 'Device', hoursWorked: 8.7,   isCorrected: false },
-  { id: 'clk-037', employeeId: 'emp-004', employeeName: 'Grossi, Bernardo', department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-16T07:03:55Z', date: '03/16/2026', time: '7:03 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-038', employeeId: 'emp-004', employeeName: 'Grossi, Bernardo', department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-16T16:00:12Z', date: '03/16/2026', time: '4:00 PM', source: 'Device', hoursWorked: 8.94,  isCorrected: false },
-  { id: 'clk-039', employeeId: 'emp-004', employeeName: 'Grossi, Bernardo', department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-17T07:08:00Z', date: '03/17/2026', time: '7:08 AM', source: 'Device', isCorrected: true },
-  { id: 'clk-040', employeeId: 'emp-004', employeeName: 'Grossi, Bernardo', department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-17T16:00:00Z', date: '03/17/2026', time: '4:00 PM', source: 'Device', hoursWorked: 8.87,  isCorrected: false },
-  { id: 'clk-041', employeeId: 'emp-004', employeeName: 'Grossi, Bernardo', department: 'Mechanical Floor', type: 'IN',  timestamp: '2026-03-18T07:03:55Z', date: '03/18/2026', time: '7:03 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-042', employeeId: 'emp-004', employeeName: 'Grossi, Bernardo', department: 'Mechanical Floor', type: 'OUT', timestamp: '2026-03-18T16:00:12Z', date: '03/18/2026', time: '4:00 PM', source: 'Device', hoursWorked: 8.94,  isCorrected: false },
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${mm}/${dd}/${yyyy}`;
+}
 
-  // ── emp-012 Hernandez, Marco ────────────────────────────────────────
-  { id: 'clk-043', employeeId: 'emp-012', employeeName: 'Hernandez, Marco', department: 'Parts',            type: 'IN',  timestamp: '2026-03-14T07:30:00Z', date: '03/14/2026', time: '7:30 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-044', employeeId: 'emp-012', employeeName: 'Hernandez, Marco', department: 'Parts',            type: 'OUT', timestamp: '2026-03-14T16:30:00Z', date: '03/14/2026', time: '4:30 PM', source: 'Device', hoursWorked: 9.0,   isOvertime: true, isCorrected: false },
-  { id: 'clk-045', employeeId: 'emp-012', employeeName: 'Hernandez, Marco', department: 'Parts',            type: 'IN',  timestamp: '2026-03-16T07:30:00Z', date: '03/16/2026', time: '7:30 AM', source: 'Device', isCorrected: false },
-  { id: 'clk-046', employeeId: 'emp-012', employeeName: 'Hernandez, Marco', department: 'Parts',            type: 'OUT', timestamp: '2026-03-16T16:00:00Z', date: '03/16/2026', time: '4:00 PM', source: 'Device', hoursWorked: 8.5,   isCorrected: false },
-  { id: 'clk-047', employeeId: 'emp-012', employeeName: 'Hernandez, Marco', department: 'Parts',            type: 'IN',  timestamp: '2026-03-18T07:30:00Z', date: '03/18/2026', time: '7:30 AM', source: 'Device', isCorrected: false },
-];
+function getSource(r: BackendClockRecord): Punch['source'] {
+  if (r.is_manual_edit) return 'Manual';
+  return 'App';
+}
+
+function mapClockRecordToPunches(r: BackendClockRecord): Punch[] {
+  const punches: Punch[] = [];
+  const nameParts = r.worker.name.split(' ');
+  const lastName = nameParts.slice(1).join(' ') || nameParts[0];
+  const firstName = nameParts[0];
+  const displayName = `${lastName}, ${firstName}`;
+  const dept = (r.worker.position || r.shift.name) as Punch['department'];
+  const source = getSource(r);
+
+  // Clock IN punch
+  punches.push({
+    id: `clk-${r.id}-in`,
+    employeeId: `emp-${r.worker_id}`,
+    employeeName: displayName,
+    department: dept,
+    type: 'IN',
+    timestamp: r.clock_in,
+    date: formatDate(r.clock_in),
+    time: formatTime12(r.clock_in),
+    source,
+    isCorrected: r.is_manual_edit,
+    notes: r.edit_note || undefined,
+    clockRecordId: r.id,
+  });
+
+  // Clock OUT punch (if exists)
+  if (r.clock_out) {
+    const hoursWorked = (new Date(r.clock_out).getTime() - new Date(r.clock_in).getTime()) / (1000 * 60 * 60);
+    punches.push({
+      id: `clk-${r.id}-out`,
+      employeeId: `emp-${r.worker_id}`,
+      employeeName: displayName,
+      department: dept,
+      type: 'OUT',
+      timestamp: r.clock_out,
+      date: formatDate(r.clock_out),
+      time: formatTime12(r.clock_out),
+      source,
+      hoursWorked: parseFloat(hoursWorked.toFixed(2)),
+      isOvertime: hoursWorked > 8,
+      isCorrected: r.is_manual_edit,
+      notes: r.edit_note || undefined,
+      clockRecordId: r.id,
+    });
+  }
+
+  return punches;
+}
 
 export async function apiGetPunches(
   filters?: Partial<PunchFilters>,
   page = 1,
   pageSize = 15
 ): Promise<PaginatedResponse<Punch>> {
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  const params: Record<string, string> = {};
+  if (filters?.employeeId) {
+    // Extract numeric id from "emp-X" format
+    const numId = filters.employeeId.replace('emp-', '');
+    params.worker_id = numId;
+  }
+  if (filters?.dateFrom) params.from = filters.dateFrom;
+  if (filters?.dateTo) params.to = filters.dateTo;
 
-  let filtered = [...MOCK_PUNCHES];
+  const records = await unwrap<BackendClockRecord[]>(client.get('/clock/records', { params }));
+  let punches = records.flatMap(mapClockRecordToPunches);
 
+  // Client-side filtering
   if (filters?.search) {
     const q = filters.search.toLowerCase();
-    filtered = filtered.filter(
+    punches = punches.filter(
       (p) =>
         p.employeeName.toLowerCase().includes(q) ||
         p.department.toLowerCase().includes(q) ||
@@ -81,27 +169,23 @@ export async function apiGetPunches(
   }
 
   if (filters?.type && filters.type !== 'all') {
-    filtered = filtered.filter((p) => p.type === filters.type);
+    punches = punches.filter((p) => p.type === filters.type);
   }
 
   if (filters?.department && filters.department !== 'all') {
-    filtered = filtered.filter((p) => p.department === filters.department);
-  }
-
-  if (filters?.employeeId) {
-    filtered = filtered.filter((p) => p.employeeId === filters.employeeId);
+    punches = punches.filter((p) => p.department === filters.department);
   }
 
   if (filters?.corrected !== undefined && filters.corrected !== 'all') {
-    filtered = filtered.filter((p) => !!p.isCorrected === filters.corrected);
+    punches = punches.filter((p) => !!p.isCorrected === filters.corrected);
   }
 
-  filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  punches.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  const total = filtered.length;
+  const total = punches.length;
   const totalPages = Math.ceil(total / pageSize);
   const start = (page - 1) * pageSize;
-  const data = filtered.slice(start, start + pageSize);
+  const data = punches.slice(start, start + pageSize);
 
   return { data, total, page, pageSize, totalPages };
 }

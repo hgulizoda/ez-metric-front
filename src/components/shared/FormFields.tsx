@@ -53,8 +53,8 @@ export function SelectField({ label, value, onChange, options, hint }: SelectFie
         className={clsx(
           'w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-all',
           isDark
-            ? 'bg-white/5 text-gray-200 border border-white/8'
-            : 'bg-gray-50 text-gray-800 border border-gray-200'
+            ? 'bg-white/5 text-gray-200 border border-white/8 focus:border-indigo-500/50'
+            : 'bg-gray-50 text-gray-800 border border-gray-200 focus:border-indigo-400'
         )}
       >
         {options.map((opt) => (

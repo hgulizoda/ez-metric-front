@@ -11,10 +11,18 @@ const LoginPage = lazy(() => import("@/pages/Auth/LoginPage"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
 const Employees = lazy(() => import("@/pages/Employees"));
+const EmployeeDetail = lazy(() => import("@/pages/Employees/EmployeeDetail"));
 const Punches = lazy(() => import("@/pages/Punches"));
 const PunchDetail = lazy(() => import("@/pages/Punches/PunchDetail"));
+const Shifts = lazy(() => import("@/pages/Shifts"));
+const Salary = lazy(() => import("@/pages/Salary"));
+const Efficiency = lazy(() => import("@/pages/Efficiency"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const ReportDetail = lazy(() => import("@/pages/Reports/ReportDetail"));
+const Devices = lazy(() => import("@/pages/Devices"));
+const ShiftTypes = lazy(() => import("@/pages/ShiftTypes"));
+const DepartmentsPage = lazy(() => import("@/pages/Departments"));
+const JobsPage = lazy(() => import("@/pages/Jobs"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const Profile = lazy(() => import("@/pages/Profile"));
 
@@ -75,10 +83,18 @@ function AppRoutes() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/employees" element={<Employees />} />
+                    <Route path="/employees/:id" element={<EmployeeDetail />} />
                     <Route path="/punches" element={<Punches />} />
                     <Route path="/punches/:id" element={<PunchDetail />} />
+                    <Route path="/shifts" element={<Shifts />} />
+                    <Route path="/salary" element={<Salary />} />
+                    <Route path="/efficiency" element={<Efficiency />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/reports/:reportId" element={<ReportDetail />} />
+                    <Route path="/devices" element={<Devices />} />
+                    <Route path="/shift-types" element={<ShiftTypes />} />
+                    <Route path="/departments" element={<DepartmentsPage />} />
+                    <Route path="/jobs" element={<JobsPage />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route
