@@ -453,7 +453,7 @@ export default function EmployeeDetail() {
                               borderRadius: 12,
                               fontSize: 12,
                             }}
-                            formatter={(value: number, name: string) => [`${value}h`, name === 'hours' ? 'Regular' : 'Overtime']}
+                            formatter={(value: unknown, name: unknown) => [`${value}h`, name === 'hours' ? 'Regular' : 'Overtime']}
                             labelStyle={{ color: isDark ? '#9ca3af' : '#6b7280', marginBottom: 4 }}
                           />
                           <Bar dataKey="hours" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} name="Regular" />
